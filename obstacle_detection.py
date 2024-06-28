@@ -32,7 +32,6 @@ def detection_object(file_location: str):
 
             cls = int(box.boxes.cls[0])
             class_name = model.names[cls]
-
             result.append([class_name, x1, y1, x2, y2])
 
     capture.release()

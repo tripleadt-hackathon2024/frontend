@@ -1,5 +1,7 @@
-from faster_whisper import WhisperModel
 import os
+
+from faster_whisper import WhisperModel
+
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 model_size = "large-v3"

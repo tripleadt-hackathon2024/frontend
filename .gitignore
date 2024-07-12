@@ -1,3 +1,5 @@
 uploads/*
 *.pt
 venv
+*.mp4
+*.wav

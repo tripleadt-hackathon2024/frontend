@@ -8,8 +8,8 @@ scale = 40
 
 
 def detection_object(file_location: str):
-    model = YOLO("yolov8n.pt").to(device)
-    ocr = PaddleOCR(lang="en", device=device)
+    model = YOLO("yolov8n.pt", verbose=False).to(device)
+    ocr = PaddleOCR(lang="en", use_gpu=True, show_log=False)
 
     object_result = []
     text_result = []
@@ -23,6 +23,8 @@ def detection_object(file_location: str):
 
     while capture.isOpened():
         ret, frame = capture.read()
+        if frame % 10:
+            continue
         if not ret:
             break
 
@@ -52,7 +54,6 @@ def detection_object(file_location: str):
                 x1, y1 = int(top_left[0]), int(top_left[1])
                 x2, y2 = int(bottom_right[0]), int(bottom_right[1])
                 text_result.append([text, x1, y1, x2, y2])
-    #
     capture.release()
     return object_result, text_result
 

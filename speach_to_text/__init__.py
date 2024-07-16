@@ -1,1 +1,1 @@
-from .transcribe import *
+from .module import *

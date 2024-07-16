@@ -50,7 +50,7 @@ async def detect_object(file: UploadFile):
     dest = save_file(['video/webm'], file)
     cords_obj, text_result = detection_object(dest)
     prompt = generate_object_detection_prompt(cords_obj, text_result)
-    result = client.generate(model='llama3:8b', prompt=prompt, stream=False)
+    result = client.generate(model='gemma', prompt=prompt, stream=False)
     return result
 
 

@@ -4,12 +4,12 @@ from paddleocr import PaddleOCR
 from ultralytics import YOLO
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+model = YOLO("yolov8n.pt", verbose=False).to(device)
+ocr = PaddleOCR(lang="en", use_gpu=True, show_log=False)
 scale = 40
 
 
 def detection_object(file_location: str):
-    model = YOLO("yolov8n.pt", verbose=False).to(device)
-    ocr = PaddleOCR(lang="en", use_gpu=True, show_log=False)
 
     object_result = []
     text_result = []

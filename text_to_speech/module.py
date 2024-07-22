@@ -11,8 +11,7 @@ print("Loading model...")
 config = XttsConfig()
 config.load_json("../XTTS-v2/config.json")
 model = Xtts.init_from_config(config)
-# model.load_checkpoint(config~, checkpoint_dir="../XTTS-v2/", use_deepspeed=True)
-model.load_checkpoint(config, checkpoint_dir="../XTTS-v2/")
+model.load_checkpoint(config, checkpoint_dir="../XTTS-v2", use_deepspeed=True)
 model.cuda()
 
 print("Computing speaker latents...")
@@ -32,7 +31,7 @@ chunks = model.inference_stream(
 p = pyaudio.PyAudio()
 
 stream = p.open(
-    format=pyaudio.paFloat32,
+    format=pyaudio.paInt16,
     channels=1,
     rate=24000,
     output=True,
@@ -43,11 +42,11 @@ for i, chunk in enumerate(chunks):
     if i == 0:
         print(f"Time to first chunk: {time.time() - t0}")
     buff = io.BytesIO()
-    torchaudio.save(buff, torch.cat([chunk]).squeeze().unsqueeze(0).cpu(), sample_rate=24000, format='wav')
+    torchaudio.save(buff, chunk.squeeze().unsqueeze(0).cpu(), 24000, format='wav', encoding='PCM_S', bits_per_sample=16)
     stream.write(buff.getvalue())
     print(f"Received chunk {i} of audio length {chunk.shape[-1]}")
     wav_chuncks.append(chunk)
 wav = torch.cat(wav_chuncks, dim=0)
 buff = io.BytesIO()
-torchaudio.save(buff, wav.squeeze().unsqueeze(0).cpu(), 24000, format='wav')
+torchaudio.save(buff, wav.squeeze().unsqueeze(0).cpu(), 24000, format='wav', encoding='PCM_S', bits_per_sample=16)
 stream.write(buff.getvalue())

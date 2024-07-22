@@ -10,7 +10,6 @@ scale = 40
 
 
 def detection_object(file_location: str):
-
     object_result = []
     text_result = []
     capture = cv2.VideoCapture(file_location)
@@ -23,7 +22,7 @@ def detection_object(file_location: str):
 
     while capture.isOpened():
         ret, frame = capture.read()
-        if frame % 10:
+        if frame % 10 == 0:
             continue
         if not ret:
             break

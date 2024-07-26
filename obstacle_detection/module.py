@@ -5,7 +5,7 @@ from ultralytics import YOLO
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model = YOLO("yolov8n.pt", verbose=False).to(device)
-ocr = PaddleOCR(lang="en", use_gpu=True, show_log=False)
+ocr = PaddleOCR(lang="en", use_gpu=False, show_log=False)
 scale = 40
 
 
@@ -22,8 +22,6 @@ def detection_object(file_location: str):
 
     while capture.isOpened():
         ret, frame = capture.read()
-        if frame % 10 == 0:
-            continue
         if not ret:
             break
 

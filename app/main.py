@@ -4,7 +4,9 @@ from uuid import uuid4
 
 from fastapi import FastAPI, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse
+from aiortc import RTCSessionDescription, RTCPeerConnection
+from aiortc.contrib.media import MediaPlayer, MediaBlackhole
 from pydantic import BaseModel
 from ollama import AsyncClient
 
@@ -20,7 +22,7 @@ userContent = {
 }
 
 origins = [
-    "*"
+    "*",
 ]
 
 app.add_middleware(
@@ -89,7 +91,6 @@ async def generate_chat(data: GenerateChatRequest):
     userContent[data.key].append({'role': 'user', 'content': data.message})
     response = await client.chat(model='llama3:8b', messages=userContent[data.key], stream=False)
     userContent[data.key].append(response['message'])
-    # encode_string = base64.b64encode(open(text_to_speach(text=response['message']['content']), "rb").read())
     return {'message': response['message'], 'audio': ''}
 
 
@@ -128,8 +129,97 @@ async def websocket_endpoint(websocket: WebSocket):
                     if 'content' in chunk['message']:
                         userContent[data['key']][-1]['content'] += chunk['message']['content']
                     await websocket.send_json(chunk['message'])
+    #                 XTTS translate realtime
+    #                 if any(i in chunk['message']['content'] for i in ['.','!','?']):
+    #             await websocket.send_json()
 
     except Exception as e:
         print(e)
         await websocket.send_json({'error': str(e)})
         await websocket.close(1000, str(e))
+
+
+pcs = set()
+
+
+class RTCOfferRequest(BaseModel):
+    type: str
+    sdp: str
+
+
+@app.post('/offer')
+async def offer_post(request: RTCOfferRequest):
+    pc = RTCPeerConnection()
+    pcs.add(pc)
+
+    offer = RTCSessionDescription(sdp=request.sdp, type=request.type)
+
+    @pc.on("connectionstatechange")
+    async def on_connectionstatechange():
+        print("Connection state is", pc.connectionState)
+        if pc.connectionState == "failed":
+            await pc.close()
+            pcs.discard(pc)
+
+    @pc.on("track")
+    async def on_track(track):
+        print("Track %s received" % track.kind)
+        if track.kind == "video":
+            pc.addTrack(track)
+        if track.kind == "audio":
+            pc.addTrack(track)
+
+        @track.on("ended")
+        async def on_ended():
+            print("Track %s ended", track.kind)
+
+    await pc.setRemoteDescription(offer)
+
+    answer = await pc.createAnswer()
+    await pc.setLocalDescription(answer)
+
+    return {"sdp": pc.localDescription.sdp, "type": pc.localDescription.type}
+
+# @app.websocket('/offer')
+# async def offer_websocket(websocket: WebSocket):
+#     await websocket.accept()
+#     pc = RTCPeerConnection()
+#     pcs.add(pc)
+#
+#     @pc.on("connectionstatechange")
+#     async def on_connectionstatechange():
+#         print("Connection state is", pc.connectionState)
+#         if pc.connectionState == "failed":
+#             await pc.close()
+#             pcs.discard(pc)
+#
+#     @pc.on("track")
+#     async def on_track(track):
+#         print(track)
+#         if track.kind == "audio":
+#             pc.addTrack(track.kind)
+#         elif track.kind == "video":
+#             pc.addTrack(track.kind)
+#
+#         @track.on("ended")
+#         async def on_ended():
+#             print("Track %s ended", track.kind)
+#     try:
+#         while True:
+#             request = await websocket.receive_json()
+#             if request['type'] == 'offer':
+#                 data = request['data']
+#                 offer = RTCSessionDescription(sdp=data['sdp'], type=data['type'])
+#                 await pc.setRemoteDescription(offer)
+#
+#                 answer = await pc.createAnswer()
+#                 await pc.setLocalDescription(answer)
+#                 await websocket.send_json({"type": "answer", "data": {"sdp": answer.sdp, "type": answer.type}})
+#             if request['type'] == 'icecandidate':
+#                 data = request['data']
+#                 await pc.addIceCandidate(data)
+#
+#     except Exception as e:
+#         print(e)
+#         await websocket.send_json({'error': str(e)})
+#         await websocket.close(1000, str(e))
